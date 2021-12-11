@@ -1,0 +1,19 @@
+{
+  "hints": [],
+  "groups": [
+    {
+      "sourceType": "sample.actuator.ServiceProperties",
+      "name": "service",
+      "type": "sample.actuator.ServiceProperties"
+    }
+  ],
+  "properties": [
+    {
+      "sourceType": "sample.actuator.ServiceProperties",
+      "defaultValue": "World",
+      "name": "service.name",
+      "description": "Name of the service.",
+      "type": "java.lang.String"
+    }
+  ]
+}
