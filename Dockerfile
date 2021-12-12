@@ -1,6 +1,6 @@
 FROM java:8-jre-alpine
 
-EXPOSE 8080
+EXPOSE 8081
 
 RUN mkdir /app
 COPY target/*.jar /app/spring-boot-application.jar

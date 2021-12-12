@@ -1,0 +1,6 @@
+node {
+   stage('Preparation') 
+   {
+	git branch: 'master',url:'https://github.com/TestAutomationCpq/BT.git'
+   }
+}
