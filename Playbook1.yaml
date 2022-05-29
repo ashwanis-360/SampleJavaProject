@@ -1,0 +1,144 @@
+---
+- hosts: stack
+  remote_user: admin
+  become: true
+  vars:
+    version: 2.19.1
+    prefix: /usr/local
+    temp_dir: /tmp
+    binary_dir: "{{ temp_dir }}/git-{{ version }}"
+    url: "https://www.kernel.org/pub/software/scm/git/git-{{ version }}.tar.gz"
+  tasks:
+    - name: Ensure Jenkins repository is added
+      yum_repository:
+        name: jenkins-ci
+        description: jenkins-ci package repository
+        baseurl: http://pkg.jenkins.io/redhat
+        gpgkey: https://pkg.jenkins.io/redhat/jenkins.io.key
+        gpgcheck: yes
+    - name: Ensure gpp key is imported
+      rpm_key:
+        state: present
+        key: https://pkg.jenkins.io/redhat/jenkins.io.key
+    - name: Ensure Jenkins and java-devel package installed
+      yum:
+        name: '{{ packages }}'
+        state: present
+        update_cache: true
+      vars:
+        packages:
+          - jenkins
+          - java-devel
+    - name: Ensure systemd daemon reloaded
+      command: systemctl daemon-reload
+    - name: Ensure Jenkins service is enabled and started
+      service:
+        name: jenkins
+        state: started
+    - name: Ensure jenkins service added to firewalld
+      firewalld:
+        service: jenkins
+        state: enabled
+        permanent: yes
+        immediate: yes
+    - name: Ensure port 8080 added to firewalld
+      firewalld:
+        port: 8080/tcp
+        state: enabled
+        permanent: yes
+        immediate: yes
+    - name: Download Apache Maven
+      get_url: url=http://apache.claz.org/maven/maven-3/3.1.1/binaries/apache-maven--bin.tar.gz dest=/tmp/apache-maven--bin.tar.gz
+    - name: Untar Maven
+      shell: chdir=/tmp creates=/opt/apache-maven- tar -zxf apache-maven--bin.tar.gz -C /opt
+    - name: Install yum package
+      yum:
+        name:
+          - curl-devel
+          - expat-devel
+          - gettext-devel
+          - openssl-devel
+          - zlib-devel
+          - wget
+          - gcc
+          - cpan
+
+    - name: Get git binary
+      unarchive:
+        src: "{{ url }}"
+        dest: "{{ temp_dir }}"
+        remote_src: yes
+      changed_when: false
+      register: result
+
+    - name: Make all git binary
+      make:
+        chdir: "{{ binary_dir }}"
+        target: all
+        params:
+          prefix: "{{ prefix }}"
+      changed_when: false
+
+    - name: Make install git binary
+      make:
+        chdir: "{{ binary_dir }}"
+        target: install
+        params:
+          prefix: "{{ prefix }}"
+      changed_when: false
+
+    - name: Remove file
+      file:
+        path: "{{ binary_dir }}"
+        state: absent
+      changed_when: false
+
+    - name: Install yum utils
+      yum:
+        name: yum-utils
+        state: latest
+
+    - name: Install device-mapper-persistent-data
+      yum:
+        name: device-mapper-persistent-data
+        state: latest
+
+    - name: Install lvm2
+      yum:
+        name: lvm2
+        state: latest
+
+    - name: Add Docker repo
+      get_url:
+        url: https://download.docker.com/linux/centos/docker-ce.repo
+        dest: /etc/yum.repos.d/docer-ce.repo
+      become: yes
+
+    - name: Enable Docker Edge repo
+      ini_file:
+        dest: /etc/yum.repos.d/docer-ce.repo
+        section: 'docker-ce-edge'
+        option: enabled
+        value: 0
+      become: yes
+
+    - name: Enable Docker Test repo
+      ini_file:
+        dest: /etc/yum.repos.d/docer-ce.repo
+        section: 'docker-ce-test'
+        option: enabled
+        value: 0
+      become: yes
+
+    - name: Install Docker
+      package:
+        name: docker-ce
+        state: latest
+      become: yes
+
+    - name: Start Docker service
+      service:
+        name: docker
+        state: started
+        enabled: yes
+      become: yes
